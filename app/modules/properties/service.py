@@ -17,5 +17,8 @@ class PropertyService:
         payload.setdefault('status', 'draft')
         return await self.repo.create(payload)
 
+    async def find_by_inbound_number(self, phone: str):
+        return await self.repo.find_by_inbound_number(phone)
+
     async def compare(self, ids: list[str]):
         return await self.repo.compare(ids)

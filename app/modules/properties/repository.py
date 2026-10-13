@@ -1,6 +1,16 @@
 from bson import ObjectId
+from bson.errors import InvalidId
 from app.database.mongodb import get_database
 from app.utils.common import stringify_id
+
+
+def _phone_variants(phone: str):
+    digits = ''.join(ch for ch in phone if ch.isdigit())
+    variants = {phone}
+    if digits:
+        variants.add(digits)
+        variants.add(f'+{digits}')
+    return list(variants)
 
 
 class PropertyRepository:
@@ -42,14 +52,38 @@ class PropertyRepository:
         return stringify_id(docs)
 
     async def get(self, property_id: str):
-        doc = await self.collection.find_one({'_id': ObjectId(property_id)})
+        try:
+            object_id = ObjectId(property_id)
+        except InvalidId:
+            return None
+        doc = await self.collection.find_one({'_id': object_id})
         return stringify_id(doc)
 
     async def create(self, payload: dict):
         result = await self.collection.insert_one(payload)
         return str(result.inserted_id)
 
+    async def find_by_inbound_number(self, phone: str):
+        values = _phone_variants(phone)
+        query = {
+            'status': 'active',
+            '$or': [
+                {'calling.inbound_number': {'$in': values}},
+                {'calling.retell_number': {'$in': values}},
+                {'calling.vapi_number': {'$in': values}},
+                {'inbound_call_number': {'$in': values}},
+                {'contact.call_number': {'$in': values}},
+            ],
+        }
+        doc = await self.collection.find_one(query)
+        return stringify_id(doc)
+
     async def compare(self, ids: list[str]):
-        object_ids = [ObjectId(x) for x in ids]
+        object_ids = []
+        for x in ids:
+            try:
+                object_ids.append(ObjectId(x))
+            except InvalidId:
+                continue
         docs = await self.collection.find({'_id': {'$in': object_ids}}).to_list(length=len(ids))
         return stringify_id(docs)

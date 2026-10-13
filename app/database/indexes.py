@@ -4,6 +4,9 @@ from app.database.mongodb import get_database
 async def ensure_indexes():
     db = get_database()
     await db.properties.create_index([('status', 1), ('property_type', 1), ('location.city', 1), ('price.amount', 1)])
+    await db.properties.create_index([('status', 1), ('calling.inbound_number', 1)])
+    await db.properties.create_index([('status', 1), ('calling.retell_number', 1)])
+    await db.properties.create_index([('status', 1), ('calling.vapi_number', 1)])
     await db.properties.create_index([('title', 'text'), ('description', 'text'), ('location.city', 'text'), ('location.area', 'text')])
     await db.messages.create_index([('conversation_id', 1), ('created_at', -1)])
     await db.conversations.create_index([('user_id', 1), ('updated_at', -1)])
