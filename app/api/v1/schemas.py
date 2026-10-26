@@ -1,5 +1,26 @@
+from typing import Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+
+
+class RetellToolRequest(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
+    @model_validator(mode='before')
+    @classmethod
+    def extract_from_retell_wrapper(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Retell wraps tool arguments inside an 'args' dictionary
+            if 'args' in data and isinstance(data['args'], dict):
+                data = {**data, **data['args']}
+            # Extract caller phone from call object if present
+            if not data.get('caller_phone') and 'call' in data and isinstance(data['call'], dict):
+                data['caller_phone'] = (
+                    data['call'].get('from_number')
+                    or data['call'].get('customer', {}).get('number')
+                    or data['call'].get('customer_number')
+                )
+        return data
 
 
 class ChatRequest(BaseModel):
@@ -8,8 +29,8 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = None
 
 
-class SearchRequest(BaseModel):
-    query: str
+class SearchRequest(RetellToolRequest):
+    query: str = ''
 
 
 class RecommendRequest(BaseModel):
@@ -56,30 +77,34 @@ class InboundCallResolveRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
-class ListingQuestionRequest(BaseModel):
-    property_id: str
-    question: str
+class ListingQuestionRequest(RetellToolRequest):
+    property_id: str = ''
+    question: str = ''
     caller_phone: str | None = None
 
 
-class CallLeadUpsertRequest(BaseModel):
+class CallLeadUpsertRequest(RetellToolRequest):
     phone: str | None = None
     name: str | None = None
+    email: str | None = None
     property_id: str | None = None
+    budget: str | None = None
+    location_preference: str | None = None
+    notes: str | None = None
     source: str = 'ai_call'
     status: str = 'new'
     requirements: dict = Field(default_factory=dict)
 
 
-class WhatsAppHandoffRequest(BaseModel):
-    property_id: str
+class WhatsAppHandoffRequest(RetellToolRequest):
+    property_id: str = ''
     caller_phone: str | None = None
     lead_id: str | None = None
     reason: str = 'AI call fallback requested'
 
 
-class CallOutcomeRequest(BaseModel):
-    provider: str
+class CallOutcomeRequest(RetellToolRequest):
+    provider: str = 'retell'
     provider_call_id: str | None = None
     lead_id: str | None = None
     property_id: str | None = None

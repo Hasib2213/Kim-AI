@@ -70,7 +70,7 @@ def _extract_call_context(payload: dict) -> dict:
         max_duration_seconds = 180
     return {
         'provider_call_id': str(
-            _first_value(payload, 'call_id', 'id', 'call.id', 'message.call.id', 'data.call_id', 'data.id') or ''
+            _first_value(payload, 'call_id', 'call.call_id', 'id', 'call.id', 'message.call.call_id', 'message.call.id', 'data.call_id', 'data.id') or ''
         ) or None,
         'from_number': _first_value(
             payload,
@@ -269,9 +269,28 @@ class CallService:
         provider_call_id = context.get('provider_call_id')
         if not provider_call_id:
             return
-        status = payload.get('status') or payload.get('event') or payload.get('event_type') or payload.get('type')
-        transcript = payload.get('transcript') or payload.get('transcript_object') or payload.get('message', {}).get('transcript')
-        duration_seconds = payload.get('duration_seconds') or payload.get('call_duration_seconds')
+        call_obj = payload.get('call') if isinstance(payload.get('call'), dict) else {}
+        status = (
+            payload.get('status')
+            or payload.get('event')
+            or payload.get('event_type')
+            or call_obj.get('call_status')
+            or payload.get('type')
+        )
+        transcript = (
+            payload.get('transcript')
+            or payload.get('transcript_object')
+            or call_obj.get('transcript')
+            or call_obj.get('transcript_object')
+            or payload.get('message', {}).get('transcript')
+        )
+        duration_seconds = (
+            payload.get('duration_seconds')
+            or payload.get('call_duration_seconds')
+            or call_obj.get('duration_seconds')
+            or (call_obj.get('duration_ms') // 1000 if call_obj.get('duration_ms') else None)
+            or call_obj.get('call_cost', {}).get('total_duration_seconds')
+        )
         property_id = context.get('property_id')
         if not property_id and context.get('to_number'):
             matched_property = await PropertyService().find_by_inbound_number(context['to_number'])

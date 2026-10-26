@@ -52,11 +52,25 @@ class PropertyRepository:
         return stringify_id(docs)
 
     async def get(self, property_id: str):
+        if not property_id:
+            return None
         try:
             object_id = ObjectId(property_id)
+            doc = await self.collection.find_one({'_id': object_id})
+            if doc:
+                return stringify_id(doc)
         except InvalidId:
-            return None
-        doc = await self.collection.find_one({'_id': object_id})
+            pass
+        # Fallback keyword lookup
+        doc = await self.collection.find_one({
+            'status': 'active',
+            '$or': [
+                {'title': {'$regex': property_id, '$options': 'i'}},
+                {'location.city': {'$regex': property_id, '$options': 'i'}},
+                {'location.area': {'$regex': property_id, '$options': 'i'}},
+                {'location.province': {'$regex': property_id, '$options': 'i'}},
+            ]
+        })
         return stringify_id(doc)
 
     async def create(self, payload: dict):

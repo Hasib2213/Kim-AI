@@ -7,6 +7,7 @@ from app.api.v1.schemas import (
     InboundCallResolveRequest,
     ListingQuestionRequest,
     OutboundCallRequest,
+    SearchRequest,
     WhatsAppHandoffRequest,
 )
 from app.calling.service import CallService
@@ -47,6 +48,11 @@ async def inbound_resolve(req: InboundCallResolveRequest):
 @router.get('/tools/properties/{property_id}')
 async def tool_property_context(property_id: str):
     return await CallToolService().property_context(property_id)
+
+
+@router.post('/tools/search-properties')
+async def tool_search_properties(req: SearchRequest):
+    return await CallToolService().search_properties(req.query)
 
 
 @router.post('/tools/listing-question')

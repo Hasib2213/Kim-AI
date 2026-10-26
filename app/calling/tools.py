@@ -140,7 +140,7 @@ class CallToolService:
         contact = _contact_value(prop)
         response = {
             'answerable': False,
-            'answer': 'I do not have that information in the listing details. I can connect you with the listing agent or owner on WhatsApp.',
+            'answer': "I don't have that exact detail right in front of me, but I can connect you with our local specialist or the owner directly on WhatsApp so they can share all the specifics with you.",
             'reason': reason,
             'handoff_available': bool(contact),
         }
@@ -156,7 +156,14 @@ class CallToolService:
         payload = dict(payload)
         payload.setdefault('source', 'ai_call')
         payload.setdefault('status', 'new')
-        return await LeadService().upsert_by_phone(payload)
+        lead = await LeadService().upsert_by_phone(payload)
+        client_name = payload.get('name')
+        msg = f"Thank you, {client_name}! I have noted your contact and requirements. Our team will reach out with matching options." if client_name else "Thank you! I have saved your requirements and our team will follow up shortly."
+        return {
+            'success': True,
+            'message': msg,
+            'lead': lead
+        }
 
     async def handoff_to_whatsapp(
         self,
@@ -202,6 +209,42 @@ class CallToolService:
             'agent_whatsapp': contact,
             'whatsapp_link': _whatsapp_link(contact, message),
             'message': message,
+        }
+
+    async def search_properties(self, query: str) -> dict:
+        from app.modules.properties.ai_service import PropertyAIService
+        try:
+            filters = await PropertyAIService().extract_search_filters(query)
+        except Exception:
+            filters = {'location': query}
+        properties = await PropertyService().search(filters)
+        if not properties:
+            return {
+                'found': False,
+                'count': 0,
+                'properties': [],
+                'summary': "We don't have an available property matching that exact request right now, but we frequently get new options in Bali and Jakarta."
+            }
+        
+        results = []
+        for p in properties[:3]:
+            price = p.get('price', {})
+            specs = p.get('specifications', {})
+            loc = p.get('location', {})
+            loc_str = f"{loc.get('area', '')}, {loc.get('city', '')}".strip(', ')
+            results.append({
+                'property_id': p.get('_id'),
+                'title': p.get('title'),
+                'location': loc_str,
+                'price': f"{price.get('amount', '')} {price.get('currency', 'IDR')}",
+                'bedrooms': specs.get('bedrooms'),
+                'bathrooms': specs.get('bathrooms'),
+            })
+        return {
+            'found': len(results) > 0,
+            'count': len(results),
+            'properties': results,
+            'summary': '; '.join([f"{r['title']} in {r['location']} ({r['bedrooms']} beds, {r['price']})" for r in results])
         }
 
     async def save_call_outcome(self, payload: dict) -> dict:
