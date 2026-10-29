@@ -24,9 +24,9 @@ def get_env_val(key: str, default: str = '') -> str:
     return default
 
 
-backend_url = get_env_val('BACKEND_PUBLIC_URL', 'https://nephelinitic-kaiden-instinctive.ngrok-free.dev').rstrip('/')
-api_key = get_env_val('RETELL_API_KEY', 'key_f58158ad0cbf5bfeeb23041b8053')
-agent_id = get_env_val('RETELL_AGENT_ID', 'agent_b61408bdfd8e1c76dcaf69f117')
+backend_url = get_env_val('BACKEND_PUBLIC_URL', '').rstrip('/')
+api_key = get_env_val('RETELL_API_KEY', '')
+agent_id = get_env_val('RETELL_AGENT_ID', '')
 
 # Target Languages: 6 Client Languages (Indonesian, English, Chinese, Korean, Japanese, Arabic) + Hindi, Bengali, Urdu
 languages_raw = get_env_val('RETELL_LANGUAGES', 'id-ID,en-US,zh-CN,ko-KR,ja-JP,ar-SA,hi-IN,ur-IN')
@@ -167,6 +167,16 @@ CRITICAL HUMAN CONVERSATION RULES:
 
 
 def update():
+    if not api_key:
+        print("❌ Error: RETELL_API_KEY is not set. Please define it in your .env or environment.")
+        return
+    if not agent_id:
+        print("❌ Error: RETELL_AGENT_ID is not set. Please define it in your .env or environment.")
+        return
+    if not backend_url:
+        print("❌ Error: BACKEND_PUBLIC_URL is not set. Please define it in your .env or environment.")
+        return
+
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
