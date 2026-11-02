@@ -42,6 +42,23 @@ class CompareRequest(BaseModel):
     property_ids: list[str]
 
 
+class PropertyCreateRequest(BaseModel):
+    model_config = ConfigDict(extra='allow')
+    title: str | None = None
+    name: str | None = None
+    property_type: str | None = None
+    property_class: str | None = None
+    listing_type: str | None = None
+    price: Any | None = None
+    currency: str = 'IDR'
+    location: Any | None = None
+    specifications: dict | None = None
+    amenities: list[str] = Field(default_factory=list)
+    description: str | None = None
+    agent: dict | None = None
+    status: str = 'draft'
+
+
 class LeadQualifyRequest(BaseModel):
     transcript: str
 

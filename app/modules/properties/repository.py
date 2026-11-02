@@ -19,7 +19,10 @@ class PropertyRepository:
         return get_database().properties
 
     async def search(self, filters: dict, limit: int = 20):
-        query = {'status': 'active'}
+        query = {}
+        status = filters.get('status', 'active')
+        if status != 'all':
+            query['status'] = status
         if v := filters.get('property_type'):
             query['property_type'] = {'$regex': f'^{v}$', '$options': 'i'}
         if v := filters.get('listing_type'):
